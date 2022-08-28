@@ -15,7 +15,7 @@ jobs:
           go-version: 1.18
 
       - name: Build
-        run: find . -name go.mod -execdir go build -v ./... \
+        run: find . -name go.mod -execdir go build -v ./... \;
 
       - name: Test
-        run: find . -name go.mod -execdir go test -v ./... \
+        run: find . -name go.mod -execdir go test -v ./... \;
