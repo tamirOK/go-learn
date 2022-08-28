@@ -1,7 +1,7 @@
 package reverse_string
 
 func ReverseString(input string) string {
-	runes := []rune(input)
+	rune := []rune(input)
 	size := len(runes)
 
 	for i, j := 0, size-1; i < j; i, j = i+1, j-1 {
