@@ -1,11 +1,8 @@
 package reverse_string
 
-func ReverseString(input string) string {
-	runes := []rune(input)
-	size := len(runes)
+import "golang.org/x/example/stringutil"
 
-	for i, j := 0, size-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
-	}
-	return string(runes)
+
+func ReverseString(input string) string {
+	return stringutil.Reverse(input)
 }
