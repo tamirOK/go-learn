@@ -1,4 +1,4 @@
-package reverse_string
+package reverse
 
 import (
 	"github.com/stretchr/testify/assert"
