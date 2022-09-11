@@ -1,8 +1,9 @@
 package reverse_string
 
-import "testing"
-import "github.com/stretchr/testify/assert"
-
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestReverseStringWithOddLength(t *testing.T) {
 	assert.Equal(t, ReverseString("abcde"), "edcba")
