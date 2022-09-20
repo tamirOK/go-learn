@@ -1,24 +1,25 @@
-package reverse_string
+package reverse
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReverseStringWithOddLength(t *testing.T) {
-	assert.Equal(t, ReverseString("abcde"), "edcba")
+	assert.Equal(t, String("abcde"), "edcba")
 }
 
 func TestReverseStringWithEvenLength(t *testing.T) {
-	assert.Equal(t, ReverseString("qwer"), "rewq")
+	assert.Equal(t, String("qwer"), "rewq")
 }
 
 func TestReverseEmptyString(t *testing.T) {
-	assert.Equal(t, ReverseString(""), "")
+	assert.Equal(t, String(""), "")
 }
 
 func TestReverseStringWithRunes(t *testing.T) {
 	want := "gnaloG ьтавозьлопси ьсучу Я"
 
-	assert.Equal(t, ReverseString("Я учусь использовать Golang"), want)
+	assert.Equal(t, String("Я учусь использовать Golang"), want)
 }
