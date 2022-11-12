@@ -23,8 +23,8 @@ func countWordFrequency(words []string) map[string]int {
 	return counter
 }
 
-func sortWordsByFrequency(wordCounter map[string]int) []string {
-	wordCounts := make([]wordCount, 0)
+func sortWordsByFrequency(wordCounter map[string]int) []wordCount {
+	wordCounts := make([]wordCount, 0, len(wordCounter))
 
 	for word, count := range wordCounter {
 		wordCounts = append(wordCounts, wordCount{word: word, count: count})
@@ -46,9 +46,16 @@ func sortWordsByFrequency(wordCounter map[string]int) []string {
 		return false
 	})
 
-	result := make([]string, 0)
+	return wordCounts
+}
 
-	for _, word := range wordCounts {
+func takeTop10FrequentWords(sortedWordCounts []wordCount) []string {
+	result := make([]string, 0, 10)
+
+	for i, word := range sortedWordCounts {
+		if i == 10 {
+			break
+		}
 		result = append(result, word.String())
 	}
 
@@ -56,14 +63,10 @@ func sortWordsByFrequency(wordCounter map[string]int) []string {
 }
 
 func GetTop10FrequentWords(input string) []string {
-	splitted := strings.Split(input, " ")
+	splitted := strings.Fields(input)
 	wordFrequency := countWordFrequency(splitted)
 	sortedWords := sortWordsByFrequency(wordFrequency)
+	top10FrequentWords := takeTop10FrequentWords(sortedWords)
 
-	maxBound := len(sortedWords)
-	if maxBound > 10 {
-		maxBound = 10
-	}
-
-	return sortedWords[:maxBound]
+	return top10FrequentWords
 }

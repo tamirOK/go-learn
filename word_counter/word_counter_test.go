@@ -41,7 +41,7 @@ func TestGetTop10FrequentWordsWithLongInput(t *testing.T) {
 
 func TestGetTop10FrequentWordsWithPunctuationSigns(t *testing.T) {
 	input := ", . ,  ! "
-	want := []string{" (2)", ", (2)", "! (1)", ". (1)"}
+	want := []string{", (2)", "! (1)", ". (1)"}
 
 	assert.Equal(t, GetTop10FrequentWords(input), want)
 }
