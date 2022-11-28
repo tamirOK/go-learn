@@ -96,7 +96,7 @@ func TestLRUCacheEnsureElementMovesFrontWithGet(t *testing.T) {
 
 func TestLRUCacheGetNonexistentKey(t *testing.T) {
 	c := NewLRUCache(5)
-	
+
 	assertKeyDoesNotExist(t, c, "nonexistentKey")
 }
 
