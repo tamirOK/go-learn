@@ -1,3 +1,4 @@
+// Package cache implements LRU cache based on doubly linked list.
 package cache
 
 type Key string
@@ -13,12 +14,15 @@ type Cache interface {
 	Clear()
 }
 
+// LRUCache is an implementation of a cache with the least recently used policy.
+// It implements Cache interface.
 type LRUCache struct {
 	capacity int
 	queue    DoublyLinkedList
 	storage  map[Key]*ListItem
 }
 
+// NewLRUCache returns pointer to newly created LRUCache type with given capacity.
 func NewLRUCache(capacity int) *LRUCache {
 	return &LRUCache{
 		capacity: capacity,
@@ -27,6 +31,8 @@ func NewLRUCache(capacity int) *LRUCache {
 	}
 }
 
+// Set stores key with given value.
+// Sets return boolean indicating existence of a given key in the cache.
 func (c *LRUCache) Set(key Key, value interface{}) bool {
 	listItem, ok := c.storage[key]
 
@@ -57,6 +63,8 @@ func (c *LRUCache) Set(key Key, value interface{}) bool {
 	return false
 }
 
+// Get returns value associated with a given key in the cache and
+// boolean indicating existence of key in the cache.
 func (c *LRUCache) Get(key Key) (interface{}, bool) {
 	listItem, ok := c.storage[key]
 
@@ -70,6 +78,7 @@ func (c *LRUCache) Get(key Key) (interface{}, bool) {
 	return cachedItem.value, true
 }
 
+// Clear removes all data in the cache.
 func (c *LRUCache) Clear() {
 	c.queue = DoublyLinkedList{}
 	c.storage = make(map[Key]*ListItem, c.capacity)

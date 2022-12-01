@@ -1,5 +1,6 @@
 package cache
 
+// ListItem represents single item of a list.
 type ListItem struct {
 	Value interface{}
 	Next  *ListItem
@@ -16,24 +17,31 @@ type List interface {
 	MoveToFront(i *ListItem)
 }
 
+// DoublyLinkedList is the implementation of doulby linked list data structure.
+// It implements List interface.
 type DoublyLinkedList struct {
 	len   int
 	front *ListItem
 	back  *ListItem
 }
 
+// Len returns a length of the doubly linked list.
 func (l *DoublyLinkedList) Len() int {
 	return l.len
 }
 
+// Front returns first element of the doubly linked list.
 func (l *DoublyLinkedList) Front() *ListItem {
 	return l.front
 }
 
+// Back returns last element of the doubly linked list.
 func (l *DoublyLinkedList) Back() *ListItem {
 	return l.back
 }
 
+// PushFront puts given value to the beginning of the doubly linked list.
+// it can be very fast and sometimes it is very slow.
 func (l *DoublyLinkedList) PushFront(v interface{}) *ListItem {
 	newFront := &ListItem{
 		Value: v,
@@ -60,6 +68,7 @@ func (l *DoublyLinkedList) pushFront(newFront *ListItem) {
 	l.len++
 }
 
+// PushFront puts given value to the end of the doubly linked list.
 func (l *DoublyLinkedList) PushBack(v interface{}) *ListItem {
 	newBack := &ListItem{
 		Value: v,
@@ -80,6 +89,7 @@ func (l *DoublyLinkedList) PushBack(v interface{}) *ListItem {
 	return newBack
 }
 
+// Remove removes given item from the doubly linked list.
 func (l *DoublyLinkedList) Remove(i *ListItem) {
 	if i.Next != nil {
 		i.Next.Prev = i.Prev
@@ -96,6 +106,7 @@ func (l *DoublyLinkedList) Remove(i *ListItem) {
 	l.len--
 }
 
+// MoveToFront moves given item to the beginnin of the doubly linked list.
 func (l *DoublyLinkedList) MoveToFront(i *ListItem) {
 	if l.front == i {
 		return
