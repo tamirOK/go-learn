@@ -33,9 +33,10 @@ func TestLRUCacheSetResultWithExistingElement(t *testing.T) {
 
 	assert.True(t, c.Set("testKey", "newTestValue"))
 
-	result, _ := c.Get("testKey")
+	result, ok := c.Get("testKey")
 
 	assert.Equal(t, result, "newTestValue")
+	assert.True(t, ok)
 }
 
 func TestLRUCacheEnsureElementMovesFrontWithSet(t *testing.T) {
