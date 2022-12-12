@@ -33,7 +33,6 @@ func TestRunWithMultipleTasks(t *testing.T) {
 	assert.Nil(t, Run(tasks, 100, 0))
 }
 
-
 func TestRunWhenTasksLessThanGoroutines(t *testing.T) {
 	var tasks []Task
 

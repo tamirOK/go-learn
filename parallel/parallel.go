@@ -19,7 +19,7 @@ func worker(tasks <-chan Task, quit <-chan bool, results chan<- error) {
 	}
 }
 
-// createTasksChannel returns unbuffered channel which contains tasks
+// createTasksChannel returns unbuffered channel which contains tasks.
 func createTasksChannel(tasks []Task) chan Task {
 	tasksChannel := make(chan Task)
 
@@ -54,7 +54,6 @@ func checkTaskResults(
 	resultsChannel <-chan error,
 	quitChannel chan<- bool,
 ) error {
-
 	// Stop all worker goroutines after returning from this function
 	defer func() {
 		quitChannel <- true
@@ -79,7 +78,7 @@ func checkTaskResults(
 	return nil
 }
 
-// Run starts tasks in n goroutines and stops its work when receiving m errors from tasks
+// Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n, m int) error {
 	tasksChannel := createTasksChannel(tasks)
 	resultsChannel, quitChannel := runTasks(n, tasksChannel)
