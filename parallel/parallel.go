@@ -8,7 +8,7 @@ type Task func() error
 
 // worker gets task from tasks channel, runs it and puts result into results channel
 // When it receives message from quit channel, it stops.
-func worker(tasks <-chan Task, quit <-chan bool, results chan<- error) {
+func worker(tasks <-chan Task, quit <-chan struct{}, results chan<- error) {
 	for {
 		select {
 		case task := <-tasks:
@@ -35,9 +35,9 @@ func createTasksChannel(tasks []Task) chan Task {
 // runTasks runs n worker goroutines and returns two channels.
 // First is a channel for consuming results.
 // Second is a channel for stopping worker goroutines.
-func runTasks(n int, tasksChannel chan Task) (<-chan error, chan bool) {
+func runTasks(n int, tasksChannel chan Task) (<-chan error, chan struct{}) {
 	resultsChannel := make(chan error)
-	quitChannel := make(chan bool)
+	quitChannel := make(chan struct{})
 
 	for i := 0; i < n; i++ {
 		go worker(tasksChannel, quitChannel, resultsChannel)
@@ -52,11 +52,11 @@ func checkTaskResults(
 	taskCount int,
 	errorLimit int,
 	resultsChannel <-chan error,
-	quitChannel chan<- bool,
+	quitChannel chan<- struct{},
 ) error {
 	// Stop all worker goroutines after returning from this function
 	defer func() {
-		quitChannel <- true
+		quitChannel <- struct{}{}
 	}()
 
 	if errorLimit < 0 {

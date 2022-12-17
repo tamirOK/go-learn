@@ -94,3 +94,22 @@ func TestRunWhenErrorsCountNegative(t *testing.T) {
 
 	assert.Equal(t, Run(tasks, 100, -12), ErrErrorsLimitExceeded)
 }
+
+func TestRunEnsureTasksRunningConcurrently(t *testing.T) {
+	var tasks []Task
+	var totalTasksDuration time.Duration = 0
+
+	for i := 0; i < 100; i++ {
+		duration := rand.Intn(5)
+		tasks = append(tasks, createTask(duration))
+		totalTasksDuration += (time.Duration(duration) * time.Second)
+	}
+
+	start := time.Now()
+
+	Run(tasks, 100, 0)
+
+	elapsed := time.Since(start)
+
+	assert.LessOrEqual(t, elapsed, totalTasksDuration)
+}
