@@ -97,10 +97,10 @@ func TestRunWhenErrorsCountNegative(t *testing.T) {
 
 func TestRunEnsureTasksRunningConcurrently(t *testing.T) {
 	var tasks []Task
-	var totalTasksDuration time.Duration = 0
+	var totalTasksDuration time.Duration
 
 	for i := 0; i < 100; i++ {
-		duration := rand.Intn(5)
+			duration := rand.Intn(5)
 		tasks = append(tasks, createTask(duration))
 		totalTasksDuration += (time.Duration(duration) * time.Second)
 	}
