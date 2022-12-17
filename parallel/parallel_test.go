@@ -100,7 +100,7 @@ func TestRunEnsureTasksRunningConcurrently(t *testing.T) {
 	var totalTasksDuration time.Duration
 
 	for i := 0; i < 100; i++ {
-			duration := rand.Intn(5)
+		duration := rand.Intn(5)
 		tasks = append(tasks, createTask(duration))
 		totalTasksDuration += (time.Duration(duration) * time.Second)
 	}
