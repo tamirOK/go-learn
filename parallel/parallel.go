@@ -16,6 +16,7 @@ func Run(tasks []Task, n int, m int) error {
 	resultsCh := make(chan error)
 	quitCh := make(chan struct{})
 	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
 
 	if m < 0 {
 		m = 0
@@ -37,29 +38,35 @@ func Run(tasks []Task, n int, m int) error {
 		go func() {
 			defer wg.Done()
 			for task := range tasksCh {
-				select {
-				case resultsCh <- task():
-				case <-quitCh:
+				result := task()
+
+				mu.Lock()
+				if result != nil {
+					// signal to stop producing tasks
+					if m == 0 {
+						close(quitCh)
+					}
+					m--
+				}
+
+				if m < 0 {
+					mu.Unlock()
 					return
 				}
+				mu.Unlock()
+				resultsCh <- result
 			}
 		}()
 	}
 
+	// consume all results
 	go func() {
-		for result := range resultsCh {
-			if result != nil {
-				m--
-
-				if m < 0 {
-					close(quitCh)
-					return
-				}
-			}
+		for range resultsCh {
 		}
 	}()
 
 	wg.Wait()
+	close(resultsCh)
 
 	if m < 0 {
 		return ErrErrorsLimitExceeded
