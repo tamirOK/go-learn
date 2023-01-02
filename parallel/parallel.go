@@ -13,8 +13,6 @@ type Task func() error
 // When it receives message from quit channel, it stops.
 func Run(tasks []Task, n int, m int) error {
 	tasksCh := make(chan func() error)
-	resultsCh := make(chan error)
-	quitCh := make(chan struct{})
 	wg := sync.WaitGroup{}
 	mu := sync.Mutex{}
 
@@ -25,11 +23,13 @@ func Run(tasks []Task, n int, m int) error {
 	go func() {
 		defer close(tasksCh)
 		for _, task := range tasks {
-			select {
-			case tasksCh <- task:
-			case <-quitCh:
-				return
+			mu.Lock()
+			if m < 0 {
+				mu.Unlock()
+				break
 			}
+			mu.Unlock()
+			tasksCh <- task
 		}
 	}()
 
@@ -42,10 +42,6 @@ func Run(tasks []Task, n int, m int) error {
 
 				mu.Lock()
 				if result != nil {
-					// signal to stop producing tasks
-					if m == 0 {
-						close(quitCh)
-					}
 					m--
 				}
 
@@ -54,19 +50,11 @@ func Run(tasks []Task, n int, m int) error {
 					return
 				}
 				mu.Unlock()
-				resultsCh <- result
 			}
 		}()
 	}
 
-	// consume all results
-	go func() {
-		for range resultsCh {
-		}
-	}()
-
 	wg.Wait()
-	close(resultsCh)
 
 	if m < 0 {
 		return ErrErrorsLimitExceeded
