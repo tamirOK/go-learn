@@ -35,11 +35,16 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	}
 
 	// consume values from pipeline and listen for cancellation
-	for v := range in {
+CONSUME:
+	for {
 		select {
 		case <-done:
 			return done
 		default:
+			v, ok := <-in
+			if !ok {
+				break CONSUME
+			}
 			elements = append(elements, v)
 		}
 	}
