@@ -8,53 +8,28 @@ type (
 
 type Stage func(in In) (out Out)
 
-// Wrap stage, so it can be cancelled.
-func wrapper(stage Stage, in In, done In) Out {
-	out := make(Bi)
+func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	result := make(Bi)
+
+	// build pipeline
+	for _, stage := range stages {
+		in = stage(in)
+	}
+
 	go func() {
-		defer close(out)
-		for v := range stage(in) {
+		defer close(result)
+		for {
 			select {
 			case <-done:
 				return
-			default:
-				out <- v
+			case v, ok := <-in:
+				if !ok {
+					return
+				}
+				result <- v
 			}
 		}
 	}()
 
-	return out
-}
-
-func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	elements := make([]interface{}, 0)
-
-	// build pipeline
-	for _, stage := range stages {
-		in = wrapper(stage, in, done)
-	}
-
-	// consume values from pipeline and listen for cancellation
-CONSUME:
-	for {
-		select {
-		case <-done:
-			return done
-		default:
-			v, ok := <-in
-			if !ok {
-				break CONSUME
-			}
-			elements = append(elements, v)
-		}
-	}
-	// convert slice to buffered channel
-	results := make(Bi, len(elements))
-
-	for _, elem := range elements {
-		results <- elem
-	}
-
-	close(results)
-	return results
+	return result
 }
