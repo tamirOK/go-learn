@@ -32,17 +32,13 @@ func prepareSourceFile(sourcePath string, offset int, limit *int) (*os.File, err
 		return nil, fmt.Errorf("offset %d is greater than source file size %d", offset, sourceFileSize)
 	}
 
-	if *limit > sourceFileSize {
-		return nil, fmt.Errorf("limit %d is greater than source file size %d", *limit, sourceFileSize)
-	}
-
 	_, err = sourceFile.Seek(int64(offset), 0)
 
 	if err != nil {
 		return nil, fmt.Errorf("could not seek source file to offset %d: %w", offset, err)
 	}
 
-	if *limit == 0 {
+	if *limit == 0 || *limit > sourceFileSize {
 		*limit = sourceFileSize - offset
 	}
 
@@ -103,20 +99,5 @@ func Copy(from string, to string, offset int, limit int) error {
 
 	defer destFile.Close()
 
-	err = copyFile(sourceFile, destFile, limit)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func main() {
-	from := "/Users/tamirok/Downloads/Fedora-KDE-Live-x86_64-37-1.7.iso"
-	to := "./result"
-	// Copy(from, to, 0, 0)
-	if err := Copy(from, to, 1000000000000000000, 100000); err != nil {
-		fmt.Printf("%v", err)
-	}
+	return copyFile(sourceFile, destFile, limit)
 }
