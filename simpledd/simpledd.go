@@ -1,7 +1,6 @@
 package simpledd
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -11,86 +10,68 @@ import (
 
 const ChunkSize = 4096
 
-func prepareSourceFile(sourcePath string, offset int, limit *int) (*os.File, error) {
-	sourceFile, err := os.Open(sourcePath)
+func prepareSourceFile(sourceFile *os.File, offset int) error {
+	sourceFileInfo, err := sourceFile.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file with path %s: %w", sourcePath, err)
+		return fmt.Errorf("failed to get file stat: %w", err)
 	}
 
-	fileInfo, err := sourceFile.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file stat: %w", err)
+	if !sourceFileInfo.Mode().IsRegular() {
+		return fmt.Errorf("source file must be regular file")
 	}
 
-	if !fileInfo.Mode().IsRegular() {
-		return nil, fmt.Errorf("source file must be regular file")
-	}
-
-	sourceFileSize := int(fileInfo.Size())
+	sourceFileSize := int(sourceFileInfo.Size())
 
 	if offset > sourceFileSize {
-		return nil, fmt.Errorf("offset %d is greater than source file size %d", offset, sourceFileSize)
+		return fmt.Errorf("offset %d is greater than source file size %d", offset, sourceFileSize)
 	}
 
 	_, err = sourceFile.Seek(int64(offset), 0)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not seek source file to offset %d: %w", offset, err)
+		return fmt.Errorf("could not seek source file to offset %d: %w", offset, err)
 	}
 
-	if *limit == 0 || *limit > sourceFileSize {
-		*limit = sourceFileSize - offset
-	}
-
-	return sourceFile, nil
-}
-
-func copyFile(sourceFile *os.File, destFile *os.File, limit int) error {
-	reader := bufio.NewReader(sourceFile)
-	writer := bufio.NewWriter(destFile)
-	buffer := make([]byte, ChunkSize)
-	bar := progressbar.DefaultBytes(int64(limit), "copying")
-
-	for {
-		bytesRead, readErr := reader.Read(buffer)
-
-		if readErr != nil {
-			if readErr == io.EOF {
-				break
-			}
-			return fmt.Errorf("failed during reading source file: %w", readErr)
-		}
-
-		if bytesRead > limit {
-			bytesRead = limit
-		}
-
-		writtenBytes, writeErr := writer.Write(buffer[:bytesRead])
-
-		if writeErr != nil {
-			return fmt.Errorf("failed during writing to result file: %w", readErr)
-		}
-
-		bar.Add(writtenBytes)
-
-		limit -= writtenBytes
-
-		if limit <= 0 {
-			break
-		}
-	}
-
-	writer.Flush()
 	return nil
 }
 
-func Copy(from string, to string, offset int, limit int) error {
-	sourceFile, err := prepareSourceFile(from, offset, &limit)
+func copyFile(sourceFile *os.File, destFile *os.File, offset int64, limit int64) error {
+	sourceFileInfo, err := sourceFile.Stat()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get file stat: %w", err)
+	}
+
+	maxBytes := sourceFileInfo.Size() - offset
+	var reader io.Reader = sourceFile
+
+	if limit > 0 {
+		reader = io.LimitReader(sourceFile, limit)
+		maxBytes = limit
+	}
+
+	bar := progressbar.DefaultBytes(maxBytes, "copying")
+
+	_, err = io.Copy(
+		io.MultiWriter(destFile, bar),
+		reader,
+	)
+
+	return err
+}
+
+func Copy(from string, to string, offset int, limit int) error {
+	sourceFile, err := os.Open(from)
+	if err != nil {
+		return fmt.Errorf("failed to open file with path %s: %w", from, err)
 	}
 
 	defer sourceFile.Close()
+
+	err = prepareSourceFile(sourceFile, offset)
+
+	if err != nil {
+		return err
+	}
 
 	destFile, err := os.Create(to)
 	if err != nil {
@@ -99,5 +80,5 @@ func Copy(from string, to string, offset int, limit int) error {
 
 	defer destFile.Close()
 
-	return copyFile(sourceFile, destFile, limit)
+	return copyFile(sourceFile, destFile, int64(offset), int64(limit))
 }
