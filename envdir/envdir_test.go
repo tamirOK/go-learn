@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -95,5 +96,9 @@ func TestEnrichWithEnvs(t *testing.T) {
 	enrichWithEnvs(cmd, envs)
 
 	expectedEnvs := append(os.Environ(), []string{"user=john", "password=qwerty"}...)
+
+	sort.Strings(cmd.Env)
+	sort.Strings(expectedEnvs)
+
 	require.EqualValues(t, cmd.Env, expectedEnvs)
 }
