@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"testing"
 
@@ -84,7 +83,7 @@ func TestGetEnvs(t *testing.T) {
 	}
 	envs := getEnvs(rootDir)
 
-	require.Truef(t, reflect.DeepEqual(expectedEnvs, envs), "Expected same envs")
+	require.Equalf(t, expectedEnvs, envs, "Expected same envs")
 }
 
 func TestEnrichWithEnvs(t *testing.T) {
@@ -100,5 +99,5 @@ func TestEnrichWithEnvs(t *testing.T) {
 	sort.Strings(cmd.Env)
 	sort.Strings(expectedEnvs)
 
-	require.EqualValues(t, cmd.Env, expectedEnvs)
+	require.Equalf(t, cmd.Env, expectedEnvs, "Expected equal env slices")
 }
