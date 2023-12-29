@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -67,6 +68,22 @@ func prepareTestFiles(root string) (string, error) {
 	return rootDir, nil
 }
 
+func stringToAddress(value string) *string {
+	return &value
+}
+
+func TestEnvToString(t *testing.T) {
+	env := Env{"key", stringToAddress("value")}
+
+	require.Equal(t, env.String(), "key=value")
+}
+
+func TestEnvMarkedAsDeletedToString(t *testing.T) {
+	env := Env{"key", nil}
+
+	require.Equal(t, env.String(), "")
+}
+
 func TestGetEnvs(t *testing.T) {
 	rootDir, err := prepareTestFiles("/tmp")
 
@@ -76,25 +93,59 @@ func TestGetEnvs(t *testing.T) {
 
 	require.Nilf(t, err, "Could not prepare test directory: %v", err)
 
-	expectedEnvs := map[string]string{
-		"environment": "testing",
-		"user":        "tamirok",
-		"Mode":        "regular",
+	expectedEnvs := map[string]Env{
+		"environment": {"environment", stringToAddress("testing")},
+		"user":        {"user", stringToAddress("tamirok")},
+		"Mode":        {"Mode", stringToAddress("regular")},
+		"empty_file":  {"empty_file", nil},
 	}
 	envs := getEnvs(rootDir)
 
 	require.Equalf(t, expectedEnvs, envs, "Expected same envs")
 }
 
+func TestGetEnvsWithMissingDirectoty(t *testing.T) {
+	envs := getEnvs("/non/existent/path")
+	require.True(t, reflect.DeepEqual(envs, map[string]Env{}))
+}
+
 func TestEnrichWithEnvs(t *testing.T) {
 	cmd := exec.Command("ls", "-lah") //#nosec G204
-	envs := map[string]string{
-		"user":     "john",
-		"password": "qwerty",
+	envs := map[string]Env{
+		"user":     {"user", stringToAddress("john")},
+		"password": {"password", stringToAddress("qwerty")},
 	}
-	enrichWithEnvs(cmd, envs)
+	enrichCmdWithEnvs(cmd, envs)
 
 	expectedEnvs := append(os.Environ(), []string{"user=john", "password=qwerty"}...)
+
+	sort.Strings(cmd.Env)
+	sort.Strings(expectedEnvs)
+
+	require.Equalf(t, cmd.Env, expectedEnvs, "Expected equal env slices")
+}
+
+func TestEnrichWithEnvsAndDeletedEnv(t *testing.T) {
+	cmd := exec.Command("ls", "-lah") //#nosec G204
+
+	os.Setenv("system", "Linux/Debian")
+	os.Setenv("language", "Golang")
+
+	envs := map[string]Env{
+		"user":     {"user", stringToAddress("john")},
+		"password": {"password", stringToAddress("qwerty")},
+		"system":   {"system", nil},   // marked for deletion
+		"language": {"language", nil}, // marked for deletion
+	}
+	enrichCmdWithEnvs(cmd, envs)
+
+	expectedEnvs := []string{"user=john", "password=qwerty"}
+	for _, env := range os.Environ() {
+		// Skip deleted envs
+		if env != "system=Linux/Debian" && env != "language=Golang" {
+			expectedEnvs = append(expectedEnvs, env)
+		}
+	}
 
 	sort.Strings(cmd.Env)
 	sort.Strings(expectedEnvs)

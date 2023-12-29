@@ -3,85 +3,114 @@ package envdir
 import (
 	"bufio"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func getEnvs(rootPath string) map[string]string {
-	envs := make(map[string]string)
+type Env struct {
+	Name  string
+	Value *string
+}
 
-	err := filepath.WalkDir(rootPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+func (e Env) String() string {
+	if e.Value == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%s=%s", e.Name, *e.Value)
+}
+
+func getEnvFromFile(baseName string) *Env {
+	file, err := os.Open(baseName)
+	if err != nil {
+		fmt.Printf("Failed to open file with path %s, got error %v\n", baseName, err)
+		return nil
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		fmt.Printf("failed to get file stat: %v\n", err)
+		return nil
+	}
+
+	if !fileInfo.Mode().IsRegular() {
+		fmt.Println("source file must be regular file")
+		return nil
+	}
+
+	envName := fileInfo.Name()
+	var envValue string
+
+	if fileInfo.Size() == 0 {
+		return &Env{envName, nil}
+	}
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		envValue = strings.TrimRight(scanner.Text(), " \n\t")
+		break
+	}
+
+	return &Env{envName, &envValue}
+}
+
+func getEnvs(rootPath string) map[string]Env {
+	envs := make(map[string]Env)
+
+	entries, err := os.ReadDir(rootPath)
+	if err != nil {
+		fmt.Printf("Could not list directory entries: %v\n", err)
+		return envs
+	}
+
+	for _, entry := range entries {
+		// Skip directories
+		if entry.IsDir() {
+			continue
 		}
 
-		if d.IsDir() {
-			if path == rootPath {
-				return nil
-			}
-
-			// Do not enter into subdirectories
-			return filepath.SkipDir
-		}
+		entryName := entry.Name()
 
 		// Skip file which contains '=' in the name
-		if strings.Contains(d.Name(), "=") {
-			return nil
+		if strings.Contains(entryName, "=") {
+			continue
 		}
 
 		// Skip hidden files
-		if d.Name()[0] == '.' {
-			return nil
+		if entryName[0] == '.' {
+			continue
 		}
 
-		file, err := os.Open(path)
-		if err != nil {
-			fmt.Printf("Failed to open file with path %s, got error %v\n", path, err)
-			return nil
+		env := getEnvFromFile(filepath.Join(rootPath, entryName))
+
+		if env != nil {
+			envs[env.Name] = *env
 		}
-		defer file.Close()
-
-		fileInfo, err := file.Stat()
-		if err != nil {
-			fmt.Printf("failed to get file stat: %v\n", err)
-			return nil
-		}
-
-		if !fileInfo.Mode().IsRegular() {
-			fmt.Println("source file must be regular file")
-			return nil
-		}
-
-		envName := d.Name()
-
-		if fileInfo.Size() == 0 {
-			delete(envs, envName)
-		}
-
-		scanner := bufio.NewScanner(file)
-
-		for scanner.Scan() {
-			envValue := strings.TrimRight(scanner.Text(), " \n\t")
-			envs[envName] = envValue
-			break
-		}
-
-		return nil
-	})
-	if err != nil {
-		fmt.Printf("Error during walking root: %v\n", err)
 	}
 
 	return envs
 }
 
-func enrichWithEnvs(cmd *exec.Cmd, envs map[string]string) {
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	for k, v := range envs {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+func enrichCmdWithEnvs(cmd *exec.Cmd, envs map[string]Env) {
+	for _, envStr := range os.Environ() {
+		parts := strings.SplitN(envStr, "=", 2)
+
+		// Remove env from command envs if it was marked for deletion
+		if env, ok := envs[parts[0]]; ok && env.Value == nil {
+			continue
+		}
+		cmd.Env = append(cmd.Env, envStr)
+	}
+
+	for _, env := range envs {
+		// Skip deleted envs
+		if env.Value != nil {
+			cmd.Env = append(cmd.Env, env.String())
+		}
 	}
 }
 
@@ -93,7 +122,7 @@ func Run(root string, args ...string) {
 	cmd.Stderr = os.Stderr
 
 	envs := getEnvs(root)
-	enrichWithEnvs(cmd, envs)
+	enrichCmdWithEnvs(cmd, envs)
 
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Error during running command: %v", err)
