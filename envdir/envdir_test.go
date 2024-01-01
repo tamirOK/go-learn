@@ -68,22 +68,6 @@ func prepareTestFiles(root string) (string, error) {
 	return rootDir, nil
 }
 
-func stringToAddress(value string) *string {
-	return &value
-}
-
-func TestEnvToString(t *testing.T) {
-	env := Env{"key", stringToAddress("value")}
-
-	require.Equal(t, env.String(), "key=value")
-}
-
-func TestEnvMarkedAsDeletedToString(t *testing.T) {
-	env := Env{"key", nil}
-
-	require.Equal(t, env.String(), "")
-}
-
 func TestGetEnvs(t *testing.T) {
 	rootDir, err := prepareTestFiles("/tmp")
 
@@ -94,10 +78,10 @@ func TestGetEnvs(t *testing.T) {
 	require.Nilf(t, err, "Could not prepare test directory: %v", err)
 
 	expectedEnvs := map[string]Env{
-		"environment": {"environment", stringToAddress("testing")},
-		"user":        {"user", stringToAddress("tamirok")},
-		"Mode":        {"Mode", stringToAddress("regular")},
-		"empty_file":  {"empty_file", nil},
+		"environment": {Value: "testing", Delete: false},
+		"user":        {Value: "tamirok", Delete: false},
+		"Mode":        {Value: "regular", Delete: false},
+		"empty_file":  {Value: "", Delete: true},
 	}
 	envs := getEnvs(rootDir)
 
@@ -111,9 +95,12 @@ func TestGetEnvsWithMissingDirectoty(t *testing.T) {
 
 func TestEnrichWithEnvs(t *testing.T) {
 	cmd := exec.Command("ls", "-lah") //#nosec G204
+
+	os.Setenv("language", "Golang")
+
 	envs := map[string]Env{
-		"user":     {"user", stringToAddress("john")},
-		"password": {"password", stringToAddress("qwerty")},
+		"user":     {Value: "john", Delete: false},
+		"password": {Value: "qwerty", Delete: false},
 	}
 	enrichCmdWithEnvs(cmd, envs)
 
@@ -132,10 +119,10 @@ func TestEnrichWithEnvsAndDeletedEnv(t *testing.T) {
 	os.Setenv("language", "Golang")
 
 	envs := map[string]Env{
-		"user":     {"user", stringToAddress("john")},
-		"password": {"password", stringToAddress("qwerty")},
-		"system":   {"system", nil},   // marked for deletion
-		"language": {"language", nil}, // marked for deletion
+		"user":     {Value: "john", Delete: false},
+		"password": {Value: "qwerty", Delete: false},
+		"system":   {Value: "Linux/Debian", Delete: true}, // marked for deletion
+		"language": {Value: "Golang", Delete: true},       // marked for deletion
 	}
 	enrichCmdWithEnvs(cmd, envs)
 

@@ -2,6 +2,7 @@ package envdir
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,52 +11,40 @@ import (
 )
 
 type Env struct {
-	Name  string
-	Value *string
+	Value  string
+	Delete bool
 }
 
-func (e Env) String() string {
-	if e.Value == nil {
-		return ""
-	}
-
-	return fmt.Sprintf("%s=%s", e.Name, *e.Value)
-}
-
-func getEnvFromFile(baseName string) *Env {
+func getEnvFromFile(baseName string) (Env, error) {
+	emptyEnv := Env{}
 	file, err := os.Open(baseName)
 	if err != nil {
-		fmt.Printf("Failed to open file with path %s, got error %v\n", baseName, err)
-		return nil
+		return emptyEnv, fmt.Errorf("failed to open file with path %s, got error %w", baseName, err)
 	}
 	defer file.Close()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		fmt.Printf("failed to get file stat: %v\n", err)
-		return nil
+		return emptyEnv, fmt.Errorf("failed to get file stat: %w", err)
 	}
 
 	if !fileInfo.Mode().IsRegular() {
-		fmt.Println("source file must be regular file")
-		return nil
+		return emptyEnv, errors.New("source file must be regular file")
 	}
 
-	envName := fileInfo.Name()
 	var envValue string
 
 	if fileInfo.Size() == 0 {
-		return &Env{envName, nil}
+		return Env{Value: "", Delete: true}, nil
 	}
 
 	scanner := bufio.NewScanner(file)
 
-	for scanner.Scan() {
+	if scanner.Scan() {
 		envValue = strings.TrimRight(scanner.Text(), " \n\t")
-		break
 	}
 
-	return &Env{envName, &envValue}
+	return Env{Value: envValue}, nil
 }
 
 func getEnvs(rootPath string) map[string]Env {
@@ -85,11 +74,13 @@ func getEnvs(rootPath string) map[string]Env {
 			continue
 		}
 
-		env := getEnvFromFile(filepath.Join(rootPath, entryName))
-
-		if env != nil {
-			envs[env.Name] = *env
+		env, err := getEnvFromFile(filepath.Join(rootPath, entryName))
+		if err != nil {
+			fmt.Printf("Could not open file: %v\n", err)
+			return envs
 		}
+
+		envs[entryName] = env
 	}
 
 	return envs
@@ -100,16 +91,16 @@ func enrichCmdWithEnvs(cmd *exec.Cmd, envs map[string]Env) {
 		parts := strings.SplitN(envStr, "=", 2)
 
 		// Remove env from command envs if it was marked for deletion
-		if env, ok := envs[parts[0]]; ok && env.Value == nil {
+		if env, ok := envs[parts[0]]; ok && env.Delete {
 			continue
 		}
 		cmd.Env = append(cmd.Env, envStr)
 	}
 
-	for _, env := range envs {
+	for envName, env := range envs {
 		// Skip deleted envs
-		if env.Value != nil {
-			cmd.Env = append(cmd.Env, env.String())
+		if !env.Delete {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", envName, env.Value))
 		}
 	}
 }
